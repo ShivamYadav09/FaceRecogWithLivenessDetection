@@ -12,6 +12,10 @@ import pickle
 import time
 import cv2
 import os
+import time
+
+import recognition
+import check
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -41,6 +45,8 @@ le = pickle.loads(open(args["le"], "rb").read())
 print("[INFO] starting video stream...")
 vs = VideoStream(src=0).start()
 time.sleep(2.0)
+
+count = 0
 
 # loop over the frames from the video stream
 while True:
@@ -91,23 +97,47 @@ while True:
 			# model to determine if the face is "real" or "fake"
 			preds = model.predict(face)[0]
 			j = np.argmax(preds)
-			label = le.classes_[j]
+			live = le.classes_[j]
+			print(live)
 
 			# draw the label and bounding box on the frame
-			label = "{}: {:.4f}".format(label, preds[j])
+			label = "{}: {:.4f}".format(live, preds[j])
 			cv2.putText(frame, label, (startX, startY - 10),
 				cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 			cv2.rectangle(frame, (startX, startY), (endX, endY),
 				(0, 0, 255), 2)
 
+
+			print("\n\n\n\n",type(preds[j]),preds[j])
+			threshold = np.array([0.80], dtype=np.float32)
+			print(type(threshold[0]), threshold[0])
+
+
 	# show the output frame and wait for a key press
 	cv2.imshow("Frame", frame)
 	key = cv2.waitKey(1) & 0xFF
 
+	count += 1
+	print(count)
+
+	if(preds[j] > threshold[0] and count>10 and live.lower()=="real"):
+		cv2.destroyAllWindows()
+		vs.stop()
+		time.sleep(1)
+		check.main()
+		break
+
+	if(count > 20 and live.lower()=="fake"):
+		cv2.destroyAllWindows()
+		vs.stop()
+		break
+
 	# if the `q` key was pressed, break from the loop
 	if key == ord("q"):
+		cv2.destroyAllWindows()
+		vs.stop()
 		break
 
 # do a bit of cleanup
-cv2.destroyAllWindows()
-vs.stop()
+#cv2.destroyAllWindows()
+#vs.stop()
